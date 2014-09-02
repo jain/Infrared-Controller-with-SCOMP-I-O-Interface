@@ -1,0 +1,46 @@
+LIBRARY IEEE;
+LIBRARY LPM;
+
+USE IEEE.STD_LOGIC_1164.ALL;
+USE IEEE.STD_LOGIC_ARITH.ALL;
+USE IEEE.STD_LOGIC_UNSIGNED.ALL;
+USE LPM.LPM_COMPONENTS.ALL;
+
+ENTITY IR_OUTPUT IS
+	PORT(
+		-- This device will take in the two required signals,
+		PACKET     : IN STD_LOGIC_VECTOR(31 DOWNTO 0);
+		-- as well as a generic "chip select".  Your device
+		-- may need more or less control signals...
+		CS         : IN STD_LOGIC;
+		-- And this device will just have one 16-bit output.
+		-- Your device might have more or less.
+		IO_DATA    : INOUT STD_LOGIC_VECTOR(15 DOWNTO 0)
+	);
+END IR_OUTPUT;
+
+
+ARCHITECTURE a OF IR_OUTPUT IS
+	-- Create some signals that we can use internally
+	SIGNAL IR_OUT   : STD_LOGIC_VECTOR(15 DOWNTO 0);
+	SIGNAL IO_OUT   : STD_LOGIC;
+	
+	BEGIN
+	-- Declare the IR_RCVR device
+	IO_BUS: LPM_BUSTRI
+	GENERIC MAP (
+		lpm_width => 16
+	)
+	PORT MAP (
+		data     => IR_OUT,
+		enabledt => IO_OUT,
+		tridata  => IO_DATA
+	);
+	
+		
+	
+	IR_OUT <= PACKET(15 DOWNTO 0);
+	IO_OUT <= CS;
+	
+	
+END a;

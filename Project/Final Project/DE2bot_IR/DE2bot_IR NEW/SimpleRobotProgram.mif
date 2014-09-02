@@ -1,0 +1,201 @@
+-- Altera Memory Initialization File (MIF)
+
+DEPTH = 1024;
+WIDTH = 16;
+
+ADDRESS_RADIX = HEX;
+DATA_RADIX = HEX;
+
+CONTENT
+  BEGIN
+    [000..3FF] : 0000;  -- Default to NOP
+
+           000 : 0599;  -- 	LOAD    Zero
+           001 : 4C83;  -- 	OUT     LVELCMD     ; Stop motors
+           002 : 4C8B;  -- 	OUT     RVELCMD
+           003 : 4CB2;  -- 	OUT     SONAREN     ; Disable sonar
+           004 : 403D;  -- 	CALL    SetupI2C    ; Configure the I2C
+           005 : 4038;  -- 	CALL    BattCheck   ; Get battery voltage (and end if too low).
+           006 : 4C05;  -- 	OUT     SSEG2       ; Display batt voltage on SS
+           007 : 0599;  -- 	LOAD    Zero
+           008 : 3417;  -- 	ADDI    &H17        ; reminder to toggle SW17
+           009 : 4C04;  -- 	OUT     SSEG1
+           00A : 4803;  -- 	IN      XIO         ; contains KEYs and SAFETY
+           00B : 25B1;  -- 	AND     StartMask   ; mask with 0x10100 : KEY3 and SAFETY
+           00C : 2DAD;  -- 	XOR     Mask4       ; KEY3 is active low; invert SAFETY to match
+           00D : 1C0A;  -- 	JPOS    WaitForUser ; one of those is not ready, so try again
+           00E : 4CC3;  -- 	OUT     RESETODO    ; reset odometry in case wheels have moved
+           00F : 4809;  -- 	IN		IR		; Read in value stored in IR
+           010 : 3760;  -- 	ADDI	-160	; Add -160 to it
+           011 : 2100;  -- 	JZERO	Fwd		; if value in AC is 0 now, jump to Fwd
+           012 : 4809;  -- 	IN		IR		; Read in value stored in IR
+           013 : 3750;  -- 	ADDI	-176	; Add -176 to it
+           014 : 2130;  -- 	JZERO	Right	; if value in AC is 0 now, jump to Right
+           015 : 4809;  -- 	IN		IR		; Read in value stored in IR
+           016 : 3720;  -- 	ADDI	-224	; Add -224 to it
+           017 : 2120;  -- 	JZERO	Left	; if value in AC is 0 now, jump to Left
+           018 : 4809;  -- 	IN		IR		; Read in value stored in IR
+           019 : 3710;  -- 	ADDI	-240	; Add -240 to it
+           01A : 2110;  -- 	JZERO	Bwd		; if value in AC is 0 now, jump to Bwd
+           01B : 4809;  -- 	IN		IR		; Read in value stored in IR
+           01C : 3790;  -- 	ADDI	-112	; Add -112 to it
+           01D : 2160;  -- 	JZERO	Speed1	; if value in AC is 0 now, jump to Speed1
+           01E : 4809;  -- 	IN		IR		; Read in value stored in IR
+           01F : 37C8;  -- 	ADDI	-56		; Add -56 to it
+           020 : 2170;  -- 	JZERO	Speed2	; if value in AC is 0 now, jump to Speed2
+           021 : 4809;  -- 	IN		IR		; Read in value stored in IR
+           022 : 3740;  -- 	ADDI	-192	; Add -92 to it
+           023 : 2150;  -- 	JZERO	RightSlow	; if value in AC is 0 now, jump to RightSlow
+           024 : 4809;  -- 	IN		IR		; Read in value stored in IR
+           025 : 37C0;  -- 	ADDI	-64		; Add -64 to it
+           026 : 2140;  -- 	JZERO	LeftSlow	; if value in AC is 0 now, jump to LeftSlow
+           027 : 1580;  -- 	JUMP	STOP	; if IR value is any other random signal jump to STOP
+           028 : 4C0A;  -- 	OUT     BEEPON      ; start beep sound
+           029 : 4044;  -- 	CALL    GetBattLvl  ; get the battery level
+           02A : 4C04;  -- 	OUT     SSEG1       ; display it everywhere
+           02B : 4C05;  -- 	OUT     SSEG2
+           02C : 4C06;  -- 	OUT     LCD
+           02D : 0599;  -- 	LOAD    Zero
+           02E : 37FF;  -- 	ADDI    -1          ; 0xFFFF
+           02F : 4C01;  -- 	OUT     LEDS        ; all LEDs on
+           030 : 4C07;  -- 	OUT     GLEDS
+           031 : 404D;  -- 	CALL    Wait1       ; 1 second
+           032 : 4C0B;  -- 	OUT     BEEPOFF     ; stop beeping
+           033 : 0599;  -- 	LOAD    Zero
+           034 : 4C01;  -- 	OUT     LEDS        ; LEDs off
+           035 : 4C07;  -- 	OUT     GLEDS
+           036 : 404D;  -- 	CALL    Wait1       ; 1 second
+           037 : 1428;  -- 	JUMP    DeadBatt    ; repeat forever
+           038 : 4044;  -- 	CALL    GetBattLvl 
+           039 : 11B6;  -- 	SUB     MinBatt
+           03A : 1828;  -- 	JNEG    DeadBatt
+           03B : 0DB6;  -- 	ADD     MinBatt     ; get original value back
+           03C : 4400;  -- 	RETURN
+           03D : 05B7;  -- 	LOAD    I2CWCmd     ; 0x1190 (write 1B, read 1B, addr 0x90)
+           03E : 4C90;  -- 	OUT     I2C_CMD     ; to I2C_CMD register
+           03F : 0599;  -- 	LOAD    Zero        ; 0x0000 (A/D port 0, no increment)
+           040 : 4C91;  -- 	OUT     I2C_DATA    ; to I2C_DATA register
+           041 : 4C92;  -- 	OUT     I2C_RDY     ; start the communication
+           042 : 404A;  -- 	CALL    BlockI2C    ; wait for it to finish
+           043 : 4400;  -- 	RETURN
+           044 : 05B8;  -- 	LOAD    I2CRCmd     ; 0x0190 (write 0B, read 1B, addr 0x90)
+           045 : 4C90;  -- 	OUT     I2C_CMD     ; to I2C_CMD
+           046 : 4C92;  -- 	OUT     I2C_RDY     ; start the communication
+           047 : 404A;  -- 	CALL    BlockI2C    ; wait for it to finish
+           048 : 4891;  -- 	IN      I2C_DATA    ; get the returned data
+           049 : 4400;  -- 	RETURN
+           04A : 4892;  -- 	IN      I2C_RDY;   ; Read busy signal
+           04B : 1C4A;  -- 	JPOS    BlockI2C    ; If not 0, try again
+           04C : 4400;  -- 	RETURN              ; Else return
+           04D : 4C02;  -- 	OUT     TIMER
+           04E : 4802;  -- 	IN      TIMER
+           04F : 37F6;  -- 	ADDI    -10
+           050 : 184E;  -- 	JNEG    Wloop
+           051 : 4400;  -- 	RETURN
+           100 : 05B9;  -- Fwd:	LOAD	SPEED		; load speed to AC
+           101 : 4C83;  -- 		OUT     LVELCMD		; Output AC value to left Motor
+           102 : 4C8B;  -- 		OUT     RVELCMD		; Output AC value to right Motor
+           103 : 059A;  -- 		LOAD	ONE			; load 1 to AC
+           104 : 4C04;  -- 		OUT		SSEG1		; output to seven segment display for debugging purposes
+           105 : 140F;  -- 		JUMP	RUN			; Jump back to Run and decode IR again
+           110 : 0599;  -- Bwd:   	LOAD	ZERO		; load 0 to AC
+           111 : 11B9;  -- 		SUB		SPEED		; subtract speed value to obtain its additive inverse
+           112 : 4C83;  -- 		OUT     LVELCMD		; Output AC value to left Motor
+           113 : 4C8B;  -- 		OUT     RVELCMD		; Output AC value to right Motor
+           114 : 059B;  -- 		LOAD	two			; load 2 to AC
+           115 : 4C04;  -- 		OUT		SSEG1		; output to seven segment display for debugging purposes
+           116 : 140F;  -- 		JUMP	RUN			; Jump back to Run and decode IR again
+           120 : 05A5;  -- Left:	LOAD	TSLOW		; load turn slow value to AC
+           121 : 4C83;  -- 		OUT		LVELCMD		; Output AC value to left Motor
+           122 : 05A4;  -- 		LOAD	FSLOW		; load slow speed
+           123 : 4C8B;  -- 		OUT		RVELCMD		; Output AC value to right Motor
+           124 : 059C;  -- 		LOAD	three		; load 3 to AC
+           125 : 4C04;  -- 		OUT		SSEG1		; output to seven segment display for debugging purposes
+           126 : 140F;  -- 		JUMP	RUN			; Jump back to Run and decode IR again
+           130 : 05A5;  -- Right:	LOAD	TSLOW		; load turn slow value to AC
+           131 : 4C8B;  -- 		OUT		RVELCMD		; Output AC value to right Motor
+           132 : 05A4;  -- 		LOAD	FSLOW		; load slow speed
+           133 : 4C83;  -- 		OUT		LVELCMD		; Output AC value to left Motor
+           134 : 140F;  -- 		JUMP	RUN			; Jump back to Run and decode IR again
+           140 : 05A6;  -- LeftSlow:	LOAD	TFSlow	; load turnforward slow value
+           141 : 4C83;  -- 		OUT		LVELCMD		; Output AC value to left Motor
+           142 : 05A6;  -- 		LOAD	TFSlow		; load turnforward slow value
+           143 : 4C8B;  -- 		OUT		RVELCMD		; Output AC value to right Motor
+           144 : 059D;  -- 		LOAD	four		; load 4 to AC
+           145 : 4C04;  -- 		OUT		SSEG1		; output to seven segment display for debugging purposes
+           146 : 140F;  -- 		JUMP	RUN			; Jump back to Run and decode IR again
+           150 : 05A6;  -- RightSlow:	LOAD	TFSlow 	; load turnforward slow value
+           151 : 4C8B;  -- 		OUT		RVELCMD		; Output AC value to right Motor
+           152 : 05A6;  -- 		LOAD	TFSlow		; load turnforward slow value
+           153 : 4C83;  -- 		OUT		LVELCMD		; Output AC value to left Motor
+           154 : 059C;  -- 		LOAD	three		; load 3
+           155 : 4C04;  -- 		OUT		SSEG1		; output to seven segment display for debugging purposes
+           156 : 140F;  -- 		JUMP	RUN			; Jump back to Run and decode IR again
+           160 : 05A4;  -- Speed1:	LOAD FSLOW			; load slow speed value
+           161 : 09B9;  -- 		STORE	SPEED		; set the speed to the slow value
+           162 : 140F;  -- 		JUMP	RUN			; Jump back to Run and decode IR again
+           170 : 05A8;  -- Speed2:	LOAD FFAST			; load fast speed value	
+           171 : 09B9;  -- 		STORE	SPEED		; set the speed to the fast value
+           172 : 140F;  -- 		JUMP	RUN			; Jump back to Run and decode IR again
+           180 : 0599;  -- Stop:	LOAD 	ZERO		; load 0 to AC
+           181 : 4C83;  -- 		OUT     LVELCMD     ; commmand motors
+           182 : 4C8B;  -- 		OUT     RVELCMD		; Output AC value to left Motor
+           183 : 05A0;  -- 		LOAD	seven		; load 7 to AC
+           184 : 4C04;  -- 		OUT		sseg1		; output to seven segment display for debugging purposes
+           185 : 140F;  -- 		JUMP	RUN			; Jump back to Run and decode IR again
+           186 : 08C0;  -- Store XPOs
+           187 : 1588;  -- JUMP	Auto
+           188 : 05A8;  -- Auto: LOAD    FFast       ; Very slow forward movement
+           189 : 4C83;  -- 	OUT     LVELCMD     ; commmand motors
+           18A : 4C8B;  -- 	OUT     RVELCMD
+           18B : 4882;  -- 	IN      LVEL        ; read left velocity
+           18C : 0998;  -- 	STORE   Temp        ; save it
+           18D : 488A;  -- 	IN      RVEL        ; read right velocity
+           18E : 0D98;  -- 	ADD     Temp        ; add to left velocity
+           18F : 3011;  -- 	SHIFT   -1          ; divide by 2 (average)
+           190 : 4C04;  -- 	OUT     SSEG1       ; display it (just as an FYI)
+           191 : 48C0;  -- 	IN      XPOS        ; get current X position
+           192 : 11B5;  -- 	SUB     OneHalf   ; check the distance
+           193 : 1988;  -- 	JNEG   	Auto    ; not there yet; keep checking
+           194 : 0599;  -- 	LOAD    Zero
+           195 : 4C83;  -- 	OUT     LVELCMD     ; stop
+           196 : 4C8B;  -- 	OUT     RVELCMD
+           197 : 1580;  -- 	JUMP	STOP
+           198 : 0000;  -- Temp:     DW 0
+           199 : 0000;  -- Zero:     DW 0
+           19A : 0001;  -- One:      DW 1
+           19B : 0002;  -- Two:      DW 2
+           19C : 0003;  -- Three:    DW 3
+           19D : 0004;  -- Four:     DW 4
+           19E : 0005;  -- Five:     DW 5
+           19F : 0006;  -- Six:      DW 6
+           1A0 : 0007;  -- Seven:    DW 7
+           1A1 : 0008;  -- Eight:    DW 8
+           1A2 : 0009;  -- Nine:     DW 9
+           1A3 : 000A;  -- Ten:      DW 10
+           1A4 : 003C;  -- FSlow:    DW 60         ; slow speed variable set to 60
+           1A5 : FFD3;  -- TSlow:    DW -45		; fast turn back wheel spin speed variable set to -45
+           1A6 : 001E;  -- TFSlow:    DW 30        ; slow turn forward wheel spin speed variable set to 30
+           1A7 : FFE2;  -- TBSlow:    DW -30		; slow turn back wheel spin speed variable set to -30
+           1A8 : 007F;  -- FFast:    DW 127        ; fast speed variable set to 127
+           1A9 : 0001;  -- Mask0:    DW &B00000001
+           1AA : 0002;  -- Mask1:    DW &B00000010
+           1AB : 0004;  -- Mask2:    DW &B00000100
+           1AC : 0008;  -- Mask3:    DW &B00001000
+           1AD : 0010;  -- Mask4:    DW &B00010000
+           1AE : 0020;  -- Mask5:    DW &B00100000
+           1AF : 0040;  -- Mask6:    DW &B01000000
+           1B0 : 0080;  -- Mask7:    DW &B10000000
+           1B1 : 0014;  -- StartMask: DW &B10100
+           1B2 : 00FF;  -- EnSonars: DW &B11111111
+           1B3 : 01DC;  -- OneMeter: DW 476        ; one meter in 2.1mm units
+           1B4 : 00EE;  -- HalfMeter: DW 238       ; half meter in 2.1mm units
+           1B5 : 02CA;  -- OneHalf: DW 714       ; half meter in 2.1mm units
+           1B6 : 006E;  -- MinBatt:  DW 110        ; 11V - minimum safe battery voltage
+           1B7 : 1190;  -- I2CWCmd:  DW &H1190     ; write one byte, read one byte, addr 0x90
+           1B8 : 0190;  -- I2CRCmd:  DW &H0190     ; write nothing, read one byte, addr 0x90
+           1B9 : 0000;  -- Speed:	DW	0			; initial speed value is set to 0
+           1BA : 0180;  -- Command:  DW &H180
+           1BB : 000F;  -- Sixteen:	DW	&H000F
+           1BC : 0000;  -- isRun:		DW	0
+  END;
